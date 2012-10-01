@@ -43,7 +43,7 @@ class LocoHandler(SocketServer.BaseRequestHandler):
     def parse_request(self):
         s = self.raw_request.split(LOCO_HEADER_DELIMITER)
         self.request_headers = json.loads(s[0])
-        self.request_file_contents = s[1]
+        self.request_file_contents = '\n'.join(s[1:])
         
     def handle(self):
         self.raw_request = self.request.recv(65536)

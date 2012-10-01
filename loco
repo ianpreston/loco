@@ -28,7 +28,7 @@ class LocoClient(object):
     def parse_response(self):
         s = self.raw_response.split(LOCO_HEADER_DELIMITER)
         self.response_headers = json.loads(s[0])
-        self.response_file_contents = s[1]
+        self.response_file_contents = '\n'.join(s[1:])
 
     def main(self):
         if len(sys.argv) < 2:
