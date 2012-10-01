@@ -2,10 +2,12 @@
 import socket
 import sys
 import json
+import optparse
 
 LOCO_HOST = 'localhost'
 LOCO_PORT = 4206
 LOCO_HEADER_DELIMITER = '\n'
+LOCO_VERSION = '0.1'
 
 class LocoError(Exception):
     pass
@@ -13,6 +15,8 @@ class LocoError(Exception):
 class LocoClient(object):
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.op = optparse.OptionParser(usage='%prog [options] <filename>', 
+                                        version='%prog ' + LOCO_VERSION) 
 
     def __del__(self):
         self.socket.close()
@@ -31,14 +35,16 @@ class LocoClient(object):
         self.response_file_contents = '\n'.join(s[1:])
 
     def main(self):
-        if len(sys.argv) < 2:
-            raise LocoError('Please specify a filename to edit')
+        options, args = self.op.parse_args()
+
+        try              : filename = args[0]
+        except IndexError: raise LocoError('Please specify a filename to edit')
 
         try:
-            with open(sys.argv[1], 'rb') as f:
+            with open(filename, 'rb') as f:
                 initial_file_contents = f.read(65535)
         except IOError:
-            raise LocoError('File does not exist or is directory: {0}'.format(sys.argv[1]))
+            raise LocoError('File does not exist or is directory: {0}'.format(filename))
 
         try:
             self.socket.connect((LOCO_HOST, LOCO_PORT))
@@ -52,7 +58,7 @@ class LocoClient(object):
         if self.response_headers['success'] == False:
             raise LocoError(self.response_headers['error_text'])
 
-        with open(sys.argv[1], 'wb') as f:
+        with open(filename, 'wb') as f:
             f.write(self.response_file_contents)
             f.flush()
 
