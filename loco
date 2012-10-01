@@ -16,13 +16,21 @@ class LocoClient(object):
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.op = optparse.OptionParser(usage='%prog [options] <filename>', 
-                                        version='%prog ' + LOCO_VERSION) 
+                                        version='%prog ' + LOCO_VERSION)
+        self.op.add_option('-e',
+                           '--editor',
+                           dest='editor',
+                           help='open EDITOR rather than the default')
 
     def __del__(self):
         self.socket.close()
 
-    def send_request(self, request_file_contents):
+    def send_request(self, request_file_contents, editor_override):
         self.request_headers = {}
+
+        if editor_override:
+            self.request_headers['editor'] = editor_override
+
         self.socket.sendall(json.dumps(self.request_headers) +
             LOCO_HEADER_DELIMITER +
             request_file_contents)
@@ -52,7 +60,7 @@ class LocoClient(object):
             if e.errno == 111: raise LocoError('Connection to server refused')
             else             : raise e
 
-        self.send_request(initial_file_contents)
+        self.send_request(initial_file_contents, options.editor)
         self.parse_response()
 
         if self.response_headers['success'] == False:

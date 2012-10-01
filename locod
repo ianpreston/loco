@@ -17,6 +17,8 @@ class LocoServer(SocketServer.TCPServer):
 
 class LocoHandler(SocketServer.BaseRequestHandler):
     def determine_editor(self):
+        if self.request_headers.get('editor', None):
+            return self.request_headers['editor']
         if os.environ.get('LOCO_EDITOR', None):
             return os.environ['LOCO_EDITOR']
         if os.environ.get('EDITOR', None):
