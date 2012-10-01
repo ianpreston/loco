@@ -1,0 +1,45 @@
+#!/usr/bin/python
+import socket
+import sys
+
+LOCO_HOST = 'localhost'
+LOCO_PORT = 4206
+
+class LocoError(Exception):
+    pass
+
+
+def usage():
+    print 'usage: {0} <filename>'.format(sys.argv[0])
+
+def main():
+    if len(sys.argv) < 2:
+        raise LocoError('Please specify a filename to edit')
+
+    try:
+        with open(sys.argv[1], 'rb') as f:
+            cur_file_contents = f.read(65535)
+    except IOError:
+        raise LocoError('File does not exist or is directory: {0}'.format(sys.argv[1]))
+
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((LOCO_HOST, LOCO_PORT))
+        s.sendall(cur_file_contents + '\n')
+
+        new_file_contents = s.recv(65536)
+    except socket.error, e:
+        if e.errno == 111: raise LocoError('Connection to server refused')
+        else             : raise e
+    finally:
+        s.close()
+
+    with open(sys.argv[1], 'wb') as f:
+        f.write(new_file_contents)
+        f.flush()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except LocoError, e:
+        print 'fatal: ' + str(e)

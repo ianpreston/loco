@@ -1,0 +1,5 @@
+#!/bin/sh
+locod &
+LASTPID=$(echo $!)
+ssh -R 4206:localhost:4206 $1
+kill ${LASTPID}
