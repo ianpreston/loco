@@ -11,7 +11,7 @@ LOCO_FALLBACK_EDITOR = 'gedit'
 LOCO_HEADER_DELIMITER = '\n'
 
 
-class LocoServer(SocketServer.TCPServer):
+class LocoServer(SocketServer.ForkingMixIn, SocketServer.TCPServer):
     allow_reuse_address = True
 
 
