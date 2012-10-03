@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import socket
 import sys
+import os
 import json
 import optparse
 
@@ -48,11 +49,14 @@ class LocoClient(object):
         try              : filename = args[0]
         except IndexError: raise LocoError('Please specify a filename to edit')
 
+        if os.access(filename, os.F_OK) == True and os.access(filename, os.W_OK) == False:
+            raise LocoError('File exists but you do not have permission to write to it: {0}'.format(filename))
+
         try:
             with open(filename, 'rb') as f:
                 initial_file_contents = f.read(65535)
         except IOError:
-            raise LocoError('File does not exist or is directory: {0}'.format(filename))
+            raise LocoError('File does not exist or is not readable: {0}'.format(filename))
 
         try:
             self.socket.connect((LOCO_HOST, LOCO_PORT))
