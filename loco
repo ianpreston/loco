@@ -23,6 +23,12 @@ class LocoClient(object):
                            dest='editor',
                            help='open EDITOR rather than the default')
 
+        self.op.add_option('-v',
+                           '--verbose',
+                           dest='verbose',
+                           action='store_true',
+                           help='verbose output')
+
     def __del__(self):
         self.socket.close()
 
@@ -32,9 +38,13 @@ class LocoClient(object):
         if editor_override:
             self.request_headers['editor'] = editor_override
 
+        if self.verbose: print 'Uploading file'
+
         self.socket.sendall(json.dumps(self.request_headers) +
             LOCO_HEADER_DELIMITER +
             request_file_contents)
+
+        if self.verbose: print 'Awaiting response from server'
 
         self.raw_response = self.socket.recv(65536)
 
@@ -45,18 +55,21 @@ class LocoClient(object):
 
     def main(self):
         options, args = self.op.parse_args()
+        self.verbose = True if options.verbose else False
 
-        try              : filename = args[0]
-        except IndexError: raise LocoError('Please specify a filename to edit')
+        try              : self.filename = args[0]
+        except IndexError: raise LocoError('Please specify a file to edit')
 
-        if os.access(filename, os.F_OK) == True and os.access(filename, os.W_OK) == False:
-            raise LocoError('File exists but you do not have permission to write to it: {0}'.format(filename))
+        if os.access(self.filename, os.F_OK) == True and os.access(self.filename, os.W_OK) == False:
+            raise LocoError('File exists but you do not have permission to write to it: {0}'.format(self.filename))
 
         try:
-            with open(filename, 'rb') as f:
+            with open(self.filename, 'rb') as f:
                 initial_file_contents = f.read(65535)
         except IOError:
-            raise LocoError('File does not exist or is not readable: {0}'.format(filename))
+            raise LocoError('File does not exist or is not readable: {0}'.format(self.filename))
+
+        if self.verbose: print 'Connecting to server'
 
         try:
             self.socket.connect((LOCO_HOST, LOCO_PORT))
@@ -70,9 +83,11 @@ class LocoClient(object):
         if self.response_headers['success'] == False:
             raise LocoError(self.response_headers['error_text'])
 
-        with open(filename, 'wb') as f:
+        with open(self.filename, 'wb') as f:
             f.write(self.response_file_contents)
             f.flush()
+
+        if self.verbose: print 'Done!'
 
 if __name__ == '__main__':
     try:
