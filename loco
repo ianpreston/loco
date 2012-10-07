@@ -16,6 +16,13 @@ class LocoError(Exception):
 class LocoClient(object):
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.filename = None
+        self.request_headers = {}
+        self.response_headers = {}
+        self.request_file_contents = None
+        self.response_file_contents = None
+        self.raw_response = None
+
         self.op = optparse.OptionParser(usage='%prog [options] <filename>', 
                                         version='%prog ' + LOCO_VERSION)
         self.op.add_option('-e',
@@ -32,54 +39,48 @@ class LocoClient(object):
     def __del__(self):
         self.socket.close()
 
-    def send_request(self, request_file_contents, editor_override):
-        self.request_headers = {}
-
-        if editor_override:
-            self.request_headers['editor'] = editor_override
-
-        if self.verbose: print 'Uploading file'
-
-        self.socket.sendall(json.dumps(self.request_headers) +
-            LOCO_HEADER_DELIMITER +
-            request_file_contents)
-
-        if self.verbose: print 'Awaiting response from server'
-
-        self.raw_response = self.socket.recv(65536)
-
-    def parse_response(self):
-        s = self.raw_response.split(LOCO_HEADER_DELIMITER)
-        self.response_headers = json.loads(s[0])
-        self.response_file_contents = '\n'.join(s[1:])
-
-    def main(self):
+    def parse_args(self):
         options, args = self.op.parse_args()
         self.verbose = True if options.verbose else False
 
         try              : self.filename = args[0]
         except IndexError: raise LocoError('Please specify a file to edit')
 
+        if options.editor:
+            self.request_headers['editor'] = options.editor
+
+    def get_file_contents(self):
         if os.access(self.filename, os.F_OK) == True and os.access(self.filename, os.W_OK) == False:
             raise LocoError('File exists but you do not have permission to write to it: {0}'.format(self.filename))
 
         try:
             with open(self.filename, 'rb') as f:
-                initial_file_contents = f.read(65535)
+                self.request_file_contents = f.read(65535)
         except IOError:
             raise LocoError('File does not exist or is not readable: {0}'.format(self.filename))
 
+    def send_request(self):
         if self.verbose: print 'Connecting to server'
-
         try:
             self.socket.connect((LOCO_HOST, LOCO_PORT))
         except socket.error, e:
             if e.errno == 111: raise LocoError('Connection to server refused')
             else             : raise e
 
-        self.send_request(initial_file_contents, options.editor)
-        self.parse_response()
+        if self.verbose: print 'Uploading file'
+        self.socket.sendall(json.dumps(self.request_headers) +
+            LOCO_HEADER_DELIMITER +
+            self.request_file_contents)
 
+    def get_and_parse_response(self):
+        if self.verbose: print 'Awaiting response from server'
+        self.raw_response = self.socket.recv(65536)
+
+        s = self.raw_response.split(LOCO_HEADER_DELIMITER)
+        self.response_headers = json.loads(s[0])
+        self.response_file_contents = '\n'.join(s[1:])
+
+    def handle_response(self):
         if self.response_headers['success'] == False:
             raise LocoError(self.response_headers['error_text'])
 
@@ -87,6 +88,12 @@ class LocoClient(object):
             f.write(self.response_file_contents)
             f.flush()
 
+    def main(self):
+        self.parse_args()
+        self.get_file_contents()
+        self.send_request()
+        self.get_and_parse_response()
+        self.handle_response()
         if self.verbose: print 'Done!'
 
 if __name__ == '__main__':
