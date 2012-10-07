@@ -16,6 +16,12 @@ class LocoServer(SocketServer.ForkingMixIn, SocketServer.TCPServer):
 
 
 class LocoHandler(SocketServer.BaseRequestHandler):
+    def setup(self):
+        self.request_headers = None
+        self.response_headers = None
+        self.raw_request = None
+        self.request_file_contents = None
+
     def determine_editor(self):
         if self.request_headers.get('editor', None):
             return self.request_headers['editor']
@@ -49,17 +55,17 @@ class LocoHandler(SocketServer.BaseRequestHandler):
         
     def handle(self):
         self.raw_request = self.request.recv(65536)
-        self.temp_filename = tempfile.mkstemp()[1]
+        temp_filename = tempfile.mkstemp()[1]
 
         self.parse_request()
 
-        with open(self.temp_filename, 'wb') as f:
+        with open(temp_filename, 'wb') as f:
             f.write(self.request_file_contents)
             f.flush()
         
         with open('/dev/null', 'rwb') as devnull:
             try:
-                subprocess.check_call([self.determine_editor(), self.temp_filename],
+                subprocess.check_call([self.determine_editor(), temp_filename],
                                       stdin=devnull,
                                       stdout=devnull,
                                       stderr=devnull)
@@ -73,7 +79,7 @@ class LocoHandler(SocketServer.BaseRequestHandler):
                 self.respond_error(0, 'spawning editor child process failed')
                 return
 
-        with open(self.temp_filename, 'r') as f:
+        with open(temp_filename, 'r') as f:
             self.respond_success(f.read(65536))
 
 
