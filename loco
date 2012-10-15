@@ -8,7 +8,7 @@ import optparse
 LOCO_HOST = 'localhost'
 LOCO_PORT = 4206
 LOCO_HEADER_DELIMITER = '\n'
-LOCO_VERSION = '0.1'
+LOCO_VERSION = '0.2'
 
 class LocoError(Exception):
     pass
