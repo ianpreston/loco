@@ -6,5 +6,6 @@ setup(name='loco',
       description='Edit remote files locally',
       author='Ian Preston',
       author_email='ian@ian-preston.com',
-      scripts=['loco', 'locod', 'locossh'],
+      py_modules=['locod'],
+      scripts=['loco', 'locossh'],
      )

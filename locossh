@@ -1,5 +1,25 @@
-#!/bin/sh
-locod &
-LASTPID=$(echo $!)
-ssh -R 4206:localhost:4206 $1
-kill ${LASTPID}
+#!/usr/bin/python
+import threading
+import os
+import sys
+import signal
+import locod
+import time
+
+def run(ssh_args):
+    srv = locod.LocoServer((locod.LOCO_HOST, locod.LOCO_PORT), locod.LocoHandler)
+    thread = threading.Thread(target=srv.serve_forever)
+    thread.daemon = True
+    thread.start()
+
+    os.system("ssh -R 4206:localhost:4206 {0}".format(ssh_args))
+
+
+if __name__ == '__main__':
+    if len(sys.argv) <= 1:
+        print "usage: {0} <ssh arguments>".format(sys.argv[0])
+    else:
+        ssh_args = ' '.join(sys.argv[1:])
+        run(ssh_args)
+
+

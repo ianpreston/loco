@@ -81,8 +81,3 @@ class LocoHandler(SocketServer.BaseRequestHandler):
 
         with open(temp_filename, 'r') as f:
             self.respond_success(f.read(65536))
-
-
-if __name__ == '__main__':
-    srv = LocoServer((LOCO_HOST, LOCO_PORT), LocoHandler)
-    srv.serve_forever()
