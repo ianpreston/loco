@@ -65,7 +65,8 @@ class LocoHandler(SocketServer.BaseRequestHandler):
         
         with open('/dev/null', 'rwb') as devnull:
             try:
-                subprocess.check_call([self.determine_editor(), temp_filename],
+                subprocess.check_call(self.determine_editor() + ' ' + temp_filename,
+                                      shell=True,
                                       stdin=devnull,
                                       stdout=devnull,
                                       stderr=devnull)
