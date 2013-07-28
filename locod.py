@@ -34,7 +34,8 @@ class LocoHandler(SocketServer.BaseRequestHandler):
 
     def respond_success(self, new_file_contents):
         self.response_headers = {
-            'success': True
+            'success': True,
+            'length': len(new_file_contents)
         }
         self.request.sendall(json.dumps(self.response_headers) +
             LOCO_HEADER_DELIMITER +
@@ -48,16 +49,28 @@ class LocoHandler(SocketServer.BaseRequestHandler):
         }
         self.request.sendall(json.dumps(self.response_headers) + LOCO_HEADER_DELIMITER + '\n')
 
-    def parse_request(self):
-        s = self.raw_request.split(LOCO_HEADER_DELIMITER)
-        self.request_headers = json.loads(s[0])
-        self.request_file_contents = '\n'.join(s[1:])
+    def get_and_parse_request(self):
+        self.raw_request = self.request.recv(2048)
+        bytes_read = len(self.raw_request)
+
+        headers = self.raw_request.split(LOCO_HEADER_DELIMITER)[0]
+        headers_length = len(headers)
+        self.request_headers = json.loads(self.raw_request.split(LOCO_HEADER_DELIMITER)[0])
+
+        bytes_read = len(self.raw_request)
+        while True:
+            b = self.request.recv(1024)
+            self.raw_request += b
+            bytes_read += len(b)
+
+            if bytes_read == headers_length + len(LOCO_HEADER_DELIMITER) + self.request_headers['length']:
+                break
+
+        self.request_file_contents = '\n'.join(self.raw_request.split(LOCO_HEADER_DELIMITER)[1:])
         
     def handle(self):
-        self.raw_request = self.request.recv(65536)
+        self.get_and_parse_request()
         temp_filename = tempfile.mkstemp()[1]
-
-        self.parse_request()
 
         with open(temp_filename, 'wb') as f:
             f.write(self.request_file_contents)
@@ -81,4 +94,4 @@ class LocoHandler(SocketServer.BaseRequestHandler):
                 return
 
         with open(temp_filename, 'r') as f:
-            self.respond_success(f.read(65536))
+            self.respond_success(f.read())

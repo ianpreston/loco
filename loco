@@ -10,6 +10,7 @@ LOCO_PORT = 4206
 LOCO_HEADER_DELIMITER = '\n'
 LOCO_VERSION = '0.2'
 
+
 class LocoError(Exception):
     pass
 
@@ -55,7 +56,8 @@ class LocoClient(object):
 
         try:
             with open(self.filename, 'rb') as f:
-                self.request_file_contents = f.read(65535)
+                self.request_file_contents = f.read()
+                self.request_headers['length'] = len(self.request_file_contents)
         except IOError:
             raise LocoError('File does not exist or is not readable: {0}'.format(self.filename))
 
@@ -74,11 +76,23 @@ class LocoClient(object):
 
     def get_and_parse_response(self):
         if self.verbose: print 'Awaiting response from server'
-        self.raw_response = self.socket.recv(65536)
+        self.raw_response = self.socket.recv(2048)
+        bytes_read = len(self.raw_response)
 
-        s = self.raw_response.split(LOCO_HEADER_DELIMITER)
-        self.response_headers = json.loads(s[0])
-        self.response_file_contents = '\n'.join(s[1:])
+        headers = self.raw_response.split(LOCO_HEADER_DELIMITER)[0]
+        headers_length = len(headers)
+        self.response_headers = json.loads(self.raw_response.split(LOCO_HEADER_DELIMITER)[0])
+
+        bytes_read = len(self.raw_response)
+        while True:
+            b = self.socket.recv(1024)
+            self.raw_response += b
+            bytes_read += len(b)
+
+            if bytes_read == headers_length + len(LOCO_HEADER_DELIMITER) + self.response_headers['length']:
+                break
+
+        self.response_file_contents = '\n'.join(self.raw_response.split(LOCO_HEADER_DELIMITER)[1:])
 
     def handle_response(self):
         if self.response_headers['success'] == False:
