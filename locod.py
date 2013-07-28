@@ -58,13 +58,10 @@ class LocoHandler(SocketServer.BaseRequestHandler):
         self.request_headers = json.loads(self.raw_request.split(LOCO_HEADER_DELIMITER)[0])
 
         bytes_read = len(self.raw_request)
-        while True:
+        while bytes_read != headers_length + len(LOCO_HEADER_DELIMITER) + self.request_headers['length']:
             b = self.request.recv(1024)
             self.raw_request += b
             bytes_read += len(b)
-
-            if bytes_read == headers_length + len(LOCO_HEADER_DELIMITER) + self.request_headers['length']:
-                break
 
         self.request_file_contents = '\n'.join(self.raw_request.split(LOCO_HEADER_DELIMITER)[1:])
         

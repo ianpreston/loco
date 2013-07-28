@@ -83,16 +83,14 @@ class LocoClient(object):
         headers_length = len(headers)
         self.response_headers = json.loads(self.raw_response.split(LOCO_HEADER_DELIMITER)[0])
 
-        bytes_read = len(self.raw_response)
-        while True:
-            b = self.socket.recv(1024)
-            self.raw_response += b
-            bytes_read += len(b)
+        if self.response_headers['success'] == True:
+            bytes_read = len(self.raw_response)
+            while bytes_read != headers_length + len(LOCO_HEADER_DELIMITER) + self.response_headers['length']:
+                b = self.socket.recv(1024)
+                self.raw_response += b
+                bytes_read += len(b)
 
-            if bytes_read == headers_length + len(LOCO_HEADER_DELIMITER) + self.response_headers['length']:
-                break
-
-        self.response_file_contents = '\n'.join(self.raw_response.split(LOCO_HEADER_DELIMITER)[1:])
+            self.response_file_contents = '\n'.join(self.raw_response.split(LOCO_HEADER_DELIMITER)[1:])
 
     def handle_response(self):
         if self.response_headers['success'] == False:
